@@ -91,16 +91,16 @@ public class Program
         // Add document defaults
         styles.Append(CreateDocDefaults());
 
-        // Add H styles (H1-H5, not built-in Heading styles)
-        for (int level = 1; level <= HeadingLevels; level++)
-        {
-            styles.Append(CreateHeadingStyle(level));
-        }
-
         // Add Requirement styles (1-8)
         for (int level = 1; level <= RequirementLevels; level++)
         {
             styles.Append(CreateRequirementStyle(level));
+        }
+
+        // Add H styles (H1-H5, not built-in Heading styles)
+        for (int level = 1; level <= HeadingLevels; level++)
+        {
+            styles.Append(CreateHeadingStyle(level));
         }
 
         return styles;
@@ -140,7 +140,7 @@ public class Program
         };
 
         style.Append(new StyleName { Val = $"H{level}" });
-        style.Append(new BasedOn { Val = "Normal" });
+        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"H{level - 1}" });
         style.Append(new PrimaryStyle());
 
         style.Append(new StyleParagraphProperties(
@@ -149,12 +149,12 @@ public class Program
                 new NumberingId { Val = 1 }
             ),
             new OutlineLevel { Val = level - 1 },
-            new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
-                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
-                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            // new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
+            new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-            )
+            ),
+            new NextParagraphStyle { Val = $"Requirement{level+1}" }
         ));
 
         style.Append(new StyleRunProperties(
@@ -184,7 +184,6 @@ public class Program
         };
 
         style.Append(new StyleName { Val = $"Requirement {level}" });
-        // Chain BasedOn: R1 -> Normal, RN -> R{N-1}
         style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level - 1}" });
         style.Append(new PrimaryStyle());
 
@@ -193,12 +192,13 @@ public class Program
                 new NumberingLevelReference { Val = numberingLevel },
                 new NumberingId { Val = 1 }
             ),
-            new SpacingBetweenLines { Before = "60", After = "60" },
-                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
-                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            new OutlineLevel { Val = numberingLevel },
+            // new SpacingBetweenLines { Before = "60", After = "60" },
+            new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-            )
+            ),
+            new NextParagraphStyle { Val = $"Requirement{level}" }
         ));
 
         style.Append(new StyleRunProperties(
@@ -270,6 +270,8 @@ public class Program
             new LevelText { Val = levelText },
             new LevelSuffix { Val = LevelSuffixValues.Tab },
             new LevelJustification { Val = LevelJustificationValues.Left },
+            // Note: Binding pStyle here requires the OpenXML type for w:pStyle under w:lvl, which isn't directly exposed.
+            // Removing to restore build; will rely on numPr in styles and outlineLvl.
             new PreviousParagraphProperties(
                 // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
                 new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
@@ -298,48 +300,46 @@ public class Program
         // Add a title
         body.Append(CreateTitleParagraph("Requirement Document Template"));
 
-        // Heading 1
-        body.Append(CreateHeadingParagraph(1, "Introduction", "heading_1"));
-
-        // Requirement under Heading 1
-        body.Append(CreateRequirementParagraph(1, "This is a top-level requirement under the introduction.", "req_1_1"));
-        body.Append(CreateRequirementParagraph(1, "This is another top-level requirement.", "req_1_2"));
+        // H1 + Requirement1 examples
+        body.Append(CreateHeadingParagraph(1, "Introduction"));
+        body.Append(CreateRequirementParagraph(1, "Requirement for H1: top-level requirement."));
+        body.Append(CreateRequirementParagraph(1, "Requirement for H1: another top-level requirement."));
 
         // Nested requirement
-        body.Append(CreateRequirementParagraph(2, "This is a nested requirement (level 2).", "req_1_2_1"));
-        body.Append(CreateRequirementParagraph(3, "This is a deeply nested requirement (level 3).", "req_1_2_1_1"));
+        body.Append(CreateRequirementParagraph(2, "This is a nested requirement (level 2)."));
+        body.Append(CreateRequirementParagraph(3, "This is a deeply nested requirement (level 3)."));
 
-        // Heading 2 under Heading 1
-        body.Append(CreateHeadingParagraph(2, "Background", "heading_1_1"));
-        body.Append(CreateRequirementParagraph(1, "Background requirement.", "req_1_1_1"));
+        // H2 + Requirement2 example
+        body.Append(CreateHeadingParagraph(2, "Background"));
+        body.Append(CreateRequirementParagraph(2, "Requirement for H2."));
 
-        // Another top-level Heading
-        body.Append(CreateHeadingParagraph(1, "Functional Requirements", "heading_2"));
-        body.Append(CreateRequirementParagraph(1, "The system shall provide user authentication.", "req_2_1"));
-        body.Append(CreateRequirementParagraph(2, "Users shall be able to log in with username and password.", "req_2_1_1"));
-        body.Append(CreateRequirementParagraph(2, "Users shall be able to reset their password via email.", "req_2_1_2"));
-        body.Append(CreateRequirementParagraph(1, "The system shall support data export.", "req_2_2"));
+        // H1 + Requirement1 again
+        body.Append(CreateHeadingParagraph(1, "Functional Requirements"));
+        body.Append(CreateRequirementParagraph(1, "The system shall provide user authentication."));
+        body.Append(CreateRequirementParagraph(2, "Users shall be able to log in with username and password."));
+        body.Append(CreateRequirementParagraph(2, "Users shall be able to reset their password via email."));
+        body.Append(CreateRequirementParagraph(1, "The system shall support data export."));
 
-        // Heading 2
-        body.Append(CreateHeadingParagraph(2, "Performance Requirements", "heading_2_1"));
-        body.Append(CreateRequirementParagraph(1, "Response time shall be under 2 seconds.", "req_2_1_perf_1"));
+        // H2 + Requirement2
+        body.Append(CreateHeadingParagraph(2, "Performance Requirements"));
+        body.Append(CreateRequirementParagraph(2, "Response time shall be under 2 seconds."));
 
-        // Demonstrate all heading levels
-        body.Append(CreateHeadingParagraph(1, "Deep Nesting Example", "heading_3"));
-        body.Append(CreateHeadingParagraph(2, "Level 2 Heading", "heading_3_1"));
-        body.Append(CreateHeadingParagraph(3, "Level 3 Heading", "heading_3_1_1"));
-        body.Append(CreateHeadingParagraph(4, "Level 4 Heading", "heading_3_1_1_1"));
-        body.Append(CreateHeadingParagraph(5, "Level 5 Heading", "heading_3_1_1_1_1"));
+        // Demonstrate all heading levels with matching RequirementN
+        body.Append(CreateHeadingParagraph(1, "Deep Nesting Example"));
+        body.Append(CreateHeadingParagraph(2, "Level 2 Heading"));
+        body.Append(CreateHeadingParagraph(3, "Level 3 Heading"));
+        body.Append(CreateHeadingParagraph(4, "Level 4 Heading"));
+        body.Append(CreateHeadingParagraph(5, "Level 5 Heading"));
 
-        // Requirements at deep levels
-        body.Append(CreateRequirementParagraph(1, "Requirement at level 1 under deep heading.", "deep_req_1"));
-        body.Append(CreateRequirementParagraph(2, "Requirement at level 2.", "deep_req_2"));
-        body.Append(CreateRequirementParagraph(3, "Requirement at level 3.", "deep_req_3"));
-        body.Append(CreateRequirementParagraph(4, "Requirement at level 4.", "deep_req_4"));
-        body.Append(CreateRequirementParagraph(5, "Requirement at level 5.", "deep_req_5"));
-        body.Append(CreateRequirementParagraph(6, "Requirement at level 6.", "deep_req_6"));
-        body.Append(CreateRequirementParagraph(7, "Requirement at level 7.", "deep_req_7"));
-        body.Append(CreateRequirementParagraph(8, "Requirement at level 8.", "deep_req_8"));
+        // Matching RequirementN under each HN
+        body.Append(CreateRequirementParagraph(1, "Requirement for H1 under deep example."));
+        body.Append(CreateRequirementParagraph(2, "Requirement for H2."));
+        body.Append(CreateRequirementParagraph(3, "Requirement for H3."));
+        body.Append(CreateRequirementParagraph(4, "Requirement for H4."));
+        body.Append(CreateRequirementParagraph(5, "Requirement at level 5."));
+        body.Append(CreateRequirementParagraph(6, "Requirement at level 6."));
+        body.Append(CreateRequirementParagraph(7, "Requirement at level 7."));
+        body.Append(CreateRequirementParagraph(8, "Requirement at level 8."));
 
         // Add instructions
         body.Append(new Paragraph(new Run(new Text(" "))));
@@ -380,7 +380,7 @@ public class Program
     /// <summary>
     /// Creates a heading paragraph with a bookmark anchor.
     /// </summary>
-    private static Paragraph CreateHeadingParagraph(int level, string text, string bookmarkId)
+    private static Paragraph CreateHeadingParagraph(int level, string text)
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
@@ -394,7 +394,7 @@ public class Program
     /// <summary>
     /// Creates a requirement paragraph with a bookmark anchor.
     /// </summary>
-    private static Paragraph CreateRequirementParagraph(int level, string text, string bookmarkId)
+    private static Paragraph CreateRequirementParagraph(int level, string text)
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
