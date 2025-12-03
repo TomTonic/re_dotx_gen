@@ -91,6 +91,13 @@ public class Program
         // Add document defaults
         styles.Append(CreateDocDefaults());
 
+        // Phase 1: create shells for all styles
+        //AddStyleShells(styles);
+
+        // Phase 2: fill properties (called after AddStyleShells)
+        //PopulateStyleProperties(styles);
+
+
         // Add Requirement styles (1-8)
         for (int level = 1; level <= RequirementLevels; level++)
         {
@@ -98,10 +105,10 @@ public class Program
         }
 
         // Add H styles (H1-H5, not built-in Heading styles)
-        for (int level = 1; level <= HeadingLevels; level++)
-        {
-            styles.Append(CreateHeadingStyle(level));
-        }
+        //for (int level = 1; level <= HeadingLevels; level++)
+        //{
+        //    styles.Append(CreateHeadingStyle(level));
+        //}
 
         return styles;
     }
@@ -125,6 +132,92 @@ public class Program
                 )
             )
         );
+    }
+
+    private static void AddStyleShells(Styles styles)
+    {
+        var normalStyle = new Style
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = "Normal"
+        };
+        normalStyle.Append(new StyleName { Val = "Normal" });
+        styles.Append(normalStyle);
+
+        // Headings H1..H5
+        for (int i = 1; i <= HeadingLevels; i++)
+        {
+            var s = new Style
+            {
+                Type = StyleValues.Paragraph,
+                CustomStyle = true,
+                StyleId = $"H{i}"
+            };
+            s.Append(new StyleName { Val = $"H{i}" });
+            styles.Append(s);
+        }
+
+        // Requirements 1..8
+        for (int i = 1; i <= RequirementLevels; i++)
+        {
+            var s = new Style
+            {
+                Type = StyleValues.Paragraph,
+                CustomStyle = true,
+                StyleId = $"Requirement{i}"
+            };
+            s.Append(new StyleName { Val = $"Requirement {i}" });
+            styles.Append(s);
+        }
+    }
+
+    private static void PopulateStyleProperties(Styles styles)
+    {
+        for (int level = 1; level <= HeadingLevels; level++)
+        {
+            var style = styles.Elements<Style>().First(s => s.StyleId == $"H{level}");
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"H{level - 1}" });
+            style.Append(new PrimaryStyle());
+            style.Append(new StyleParagraphProperties(
+                new NumberingProperties(
+                    new NumberingLevelReference { Val = level - 1 },
+                    new NumberingId { Val = 1 }
+                ),
+                new OutlineLevel { Val = level - 1 },
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+                new Tabs(
+                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                ),
+                new NextParagraphStyle { Val = $"Requirement{level+1}" }
+            ));
+            style.Append(new StyleRunProperties(
+                new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+                new Bold(),
+                new FontSize { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } },
+                new FontSizeComplexScript { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } }
+            ));
+        }
+
+        for (int level = 1; level <= RequirementLevels; level++)
+        {
+            var style = styles.Elements<Style>().First(s => s.StyleId == $"Requirement{level}");
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level - 1}" });
+            style.Append(new PrimaryStyle());
+            style.Append(new StyleParagraphProperties(
+                new NumberingProperties(
+                    new NumberingLevelReference { Val = level },
+                    new NumberingId { Val = 2 }
+                ),
+                new OutlineLevel { Val = level },
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+                new Tabs(
+                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                ),
+                new NextParagraphStyle { Val = $"Requirement{level}" }
+            ));
+            // BasedOn chain:
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level-1}" });
+        }
     }
 
     /// <summary>
@@ -235,14 +328,22 @@ public class Program
         numbering.Append(abstractNum);
 
         // Create the numbering instance
-        var numInstance = new NumberingInstance(
+        var numInstance1 = new NumberingInstance(
             new AbstractNumId { Val = 1 }
         )
         {
             NumberID = 1
         };
 
-        numbering.Append(numInstance);
+        //var numInstance2 = new NumberingInstance(
+        //    new AbstractNumId { Val = 1 }
+        //)
+        //{
+        //    NumberID = 2
+        //};
+
+        numbering.Append(numInstance1);
+        //numbering.Append(numInstance2);
 
         return numbering;
     }
@@ -270,20 +371,17 @@ public class Program
             new LevelText { Val = levelText },
             new LevelSuffix { Val = LevelSuffixValues.Tab },
             new LevelJustification { Val = LevelJustificationValues.Left },
-            // Note: Binding pStyle here requires the OpenXML type for w:pStyle under w:lvl, which isn't directly exposed.
-            // Removing to restore build; will rely on numPr in styles and outlineLvl.
             new PreviousParagraphProperties(
-                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
                 new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
                 new Tabs(
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
                 )
-            ),
-            new NumberingSymbolRunProperties(
-                new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-                new FontSize { Val = FontSize },
-                new FontSizeComplexScript { Val = FontSize }
-            )
+            )//,
+            //new NumberingSymbolRunProperties(
+            //    new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+            //    new FontSize { Val = FontSize },
+            //    new FontSizeComplexScript { Val = FontSize }
+            //)
         )
         {
             LevelIndex = levelIndex
