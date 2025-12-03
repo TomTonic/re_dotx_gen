@@ -2,6 +2,8 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.Text;
+using System.IO;
+using System.IO.Compression;
 
 namespace RequirementTemplateGenerator;
 
@@ -13,17 +15,36 @@ public class Program
     // Constants for formatting
     private const string FontName = "Arial";
     private const string FontSize = "22"; // 11pt = 22 half-points
-    private const int TextIndentTwips = 1134; // 2cm = 1134 twips (20 twips per point, 567 twips per cm)
+    private const int TextIndentTwips = 1701; // 3cm = 1701 twips (567 twips per cm)
     private const int HeadingLevels = 5;
     private const int RequirementLevels = 8;
 
     public static void Main(string[] args)
     {
         string outputPath = args.Length > 0 ? args[0] : "RequirementTemplate.dotx";
-        
+
         Console.WriteLine($"Generating Word template: {outputPath}");
-        GenerateTemplate(outputPath);
-        Console.WriteLine($"Template generated successfully: {outputPath}");
+        try
+        {
+            GenerateTemplate(outputPath);
+            Console.WriteLine($"Template generated successfully: {outputPath}");
+        }
+        catch (UnauthorizedAccessException ua)
+        {
+            Console.Error.WriteLine($"Access denied writing to '{outputPath}': {ua.Message}");
+            var fallback = Path.Combine(Path.GetTempPath(), Path.GetFileName(outputPath));
+            Console.WriteLine($"Attempting fallback output path: {fallback}");
+            GenerateTemplate(fallback);
+            Console.WriteLine($"Template generated successfully: {fallback}");
+        }
+        catch (IOException io) when (io.Message != null && io.Message.Contains("Permission denied"))
+        {
+            Console.Error.WriteLine($"I/O error writing to '{outputPath}': {io.Message}");
+            var fallback = Path.Combine(Path.GetTempPath(), Path.GetFileName(outputPath));
+            Console.WriteLine($"Attempting fallback output path: {fallback}");
+            GenerateTemplate(fallback);
+            Console.WriteLine($"Template generated successfully: {fallback}");
+        }
     }
 
     /// <summary>
@@ -31,24 +52,33 @@ public class Program
     /// </summary>
     public static void GenerateTemplate(string filePath)
     {
-        using var document = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Template);
+        // Determine document type based on file extension
+        var docType = Path.GetExtension(filePath).ToLowerInvariant() == ".docx"
+            ? WordprocessingDocumentType.Document
+            : WordprocessingDocumentType.Template;
 
-        // Add the main document part
-        var mainPart = document.AddMainDocumentPart();
-        mainPart.Document = new Document(new Body());
+        using (var document = WordprocessingDocument.Create(filePath, docType))
+        {
+            // Add the main document part
+            var mainPart = document.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body());
 
-        // Add styles part
-        var stylesPart = mainPart.AddNewPart<StyleDefinitionsPart>();
-        stylesPart.Styles = CreateStyles();
+            // Add styles part
+            var stylesPart = mainPart.AddNewPart<StyleDefinitionsPart>();
+            stylesPart.Styles = CreateStyles();
 
-        // Add numbering part
-        var numberingPart = mainPart.AddNewPart<NumberingDefinitionsPart>();
-        numberingPart.Numbering = CreateNumbering();
+            // Add numbering part
+            var numberingPart = mainPart.AddNewPart<NumberingDefinitionsPart>();
+            numberingPart.Numbering = CreateNumbering();
 
-        // Add sample content to demonstrate the styles
-        AddSampleContent(mainPart.Document.Body!);
+            // Add sample content to demonstrate the styles
+            AddSampleContent(mainPart.Document.Body!);
 
-        document.Save();
+            document.Save();
+        }
+
+        // Post-process the generated .dotx to ensure correct content types and relationship targets
+        DotxFixer.FixDotx(filePath);
     }
 
     /// <summary>
@@ -61,10 +91,7 @@ public class Program
         // Add document defaults
         styles.Append(CreateDocDefaults());
 
-        // Add Normal style (base for all)
-        styles.Append(CreateNormalStyle());
-
-        // Add Heading styles (1-5)
+        // Add H styles (H1-H5, not built-in Heading styles)
         for (int level = 1; level <= HeadingLevels; level++)
         {
             styles.Append(CreateHeadingStyle(level));
@@ -101,58 +128,41 @@ public class Program
     }
 
     /// <summary>
-    /// Creates the Normal base style.
-    /// </summary>
-    private static Style CreateNormalStyle()
-    {
-        return new Style(
-            new StyleName { Val = "Normal" },
-            new PrimaryStyle(),
-            new StyleRunProperties(
-                new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-                new FontSize { Val = FontSize },
-                new FontSizeComplexScript { Val = FontSize }
-            )
-        )
-        {
-            Type = StyleValues.Paragraph,
-            StyleId = "Normal",
-            Default = true
-        };
-    }
-
-    /// <summary>
-    /// Creates a Heading style for the specified level.
+    /// Creates a H style for the specified level (H1-H5).
     /// </summary>
     private static Style CreateHeadingStyle(int level)
     {
-        var style = new Style(
-            new StyleName { Val = $"Heading {level}" },
-            new BasedOn { Val = "Normal" },
-            new NextParagraphStyle { Val = "Normal" },
-            new PrimaryStyle(),
-            new StyleParagraphProperties(
-                new NumberingProperties(
-                    new NumberingLevelReference { Val = level - 1 },
-                    new NumberingId { Val = 1 }
-                ),
-                new OutlineLevel { Val = level - 1 },
-                new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
-                new Indentation { Left = "0", Hanging = "0" },
-                new Tabs(
-                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                )
-            ),
-            new StyleRunProperties(
-                new Bold(),
-                new FontSize { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } },
-                new FontSizeComplexScript { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } }
-            )
-        )
+        var style = new Style
         {
             Type = StyleValues.Paragraph,
-            StyleId = $"Heading{level}"
+            CustomStyle = true,
+            StyleId = $"H{level}"
         };
+
+        style.Append(new StyleName { Val = $"H{level}" });
+        style.Append(new BasedOn { Val = "Normal" });
+        style.Append(new PrimaryStyle());
+
+        style.Append(new StyleParagraphProperties(
+            new NumberingProperties(
+                new NumberingLevelReference { Val = level - 1 },
+                new NumberingId { Val = 1 }
+            ),
+            new OutlineLevel { Val = level - 1 },
+            new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
+                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            new Tabs(
+                new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+            )
+        ));
+
+        style.Append(new StyleRunProperties(
+            new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+            new Bold(),
+            new FontSize { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } },
+            new FontSizeComplexScript { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } }
+        ));
 
         return style;
     }
@@ -163,37 +173,39 @@ public class Program
     /// </summary>
     private static Style CreateRequirementStyle(int level)
     {
-        // Requirement styles use levels HeadingLevels + level - 1 in the numbering
-        // This allows them to continue from heading numbering
-        int numberingLevel = HeadingLevels + level - 1;
+        // Map RequirementN to ilvl N (0-based), clamped to Word's 9-level max
+        int numberingLevel = Math.Min(level, 8);
 
-        var style = new Style(
-            new StyleName { Val = $"Requirement {level}" },
-            new BasedOn { Val = "Normal" },
-            new NextParagraphStyle { Val = $"Requirement{level}" },
-            new PrimaryStyle(),
-            new StyleParagraphProperties(
-                new NumberingProperties(
-                    new NumberingLevelReference { Val = numberingLevel },
-                    new NumberingId { Val = 1 }
-                ),
-                new SpacingBetweenLines { Before = "60", After = "60" },
-                // No left indent for the number, but text starts at 2cm
-                new Indentation { Left = "0", Hanging = "0" },
-                new Tabs(
-                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                )
-            ),
-            new StyleRunProperties(
-                new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-                new FontSize { Val = FontSize },
-                new FontSizeComplexScript { Val = FontSize }
-            )
-        )
+        var style = new Style
         {
             Type = StyleValues.Paragraph,
+            CustomStyle = true,
             StyleId = $"Requirement{level}"
         };
+
+        style.Append(new StyleName { Val = $"Requirement {level}" });
+        // Chain BasedOn: R1 -> Normal, RN -> R{N-1}
+        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level - 1}" });
+        style.Append(new PrimaryStyle());
+
+        style.Append(new StyleParagraphProperties(
+            new NumberingProperties(
+                new NumberingLevelReference { Val = numberingLevel },
+                new NumberingId { Val = 1 }
+            ),
+            new SpacingBetweenLines { Before = "60", After = "60" },
+                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            new Tabs(
+                new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+            )
+        ));
+
+        style.Append(new StyleRunProperties(
+            new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+            new FontSize { Val = FontSize },
+            new FontSizeComplexScript { Val = FontSize }
+        ));
 
         return style;
     }
@@ -210,7 +222,9 @@ public class Program
         var abstractNum = new AbstractNum { AbstractNumberId = 1 };
         abstractNum.Append(new MultiLevelType { Val = MultiLevelValues.Multilevel });
 
-        int totalLevels = HeadingLevels + RequirementLevels;
+        // Word supports a maximum of 9 multilevel list levels (0-8).
+        // Cap the generated levels to avoid Word repair prompts.
+        int totalLevels = Math.Min(HeadingLevels + RequirementLevels, 9);
 
         for (int i = 0; i < totalLevels; i++)
         {
@@ -254,9 +268,10 @@ public class Program
             new StartNumberingValue { Val = 1 },
             new NumberingFormat { Val = NumberFormatValues.Decimal },
             new LevelText { Val = levelText },
+            new LevelSuffix { Val = LevelSuffixValues.Tab },
             new LevelJustification { Val = LevelJustificationValues.Left },
             new PreviousParagraphProperties(
-                // Number starts at position 0, text starts at 2cm with dot leader
+                // Numbers and text aligned: Left = text indent (3cm), Hanging = text indent
                 new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
                 new Tabs(
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
@@ -335,11 +350,9 @@ public class Program
             )
         ));
 
-        // Add hyperlink example
+        // Add cross-reference example (plain text; bookmarking removed)
         body.Append(new Paragraph(
-            new Run(new Text("Example cross-reference: See ")),
-            CreateHyperlinkToBookmark("req_2_1", "Requirement 2.1"),
-            new Run(new Text(" for authentication requirements."))
+            new Run(new Text("Example cross-reference: See Requirement 2.1 for authentication requirements."))
         ));
     }
 
@@ -369,25 +382,12 @@ public class Program
     /// </summary>
     private static Paragraph CreateHeadingParagraph(int level, string text, string bookmarkId)
     {
-        var para = new Paragraph(
-            new ParagraphProperties(
-                new ParagraphStyleId { Val = $"Heading{level}" }
-            )
+        var para = new Paragraph();
+        var pPr = new ParagraphProperties(
+            new ParagraphStyleId { Val = $"H{level}" }
         );
-
-        // Add bookmark start
-        string bookmarkIdNum = GetBookmarkId(bookmarkId);
-        para.Append(new BookmarkStart { Id = bookmarkIdNum, Name = bookmarkId });
-
-        // Add the text with a tab to position it at 2cm
-        para.Append(new Run(
-            new TabChar(),
-            new Text(text)
-        ));
-
-        // Add bookmark end
-        para.Append(new BookmarkEnd { Id = bookmarkIdNum });
-
+        para.Append(pPr);
+        para.Append(new Run(new Text(text)));
         return para;
     }
 
@@ -396,60 +396,13 @@ public class Program
     /// </summary>
     private static Paragraph CreateRequirementParagraph(int level, string text, string bookmarkId)
     {
-        var para = new Paragraph(
-            new ParagraphProperties(
-                new ParagraphStyleId { Val = $"Requirement{level}" }
-            )
+        var para = new Paragraph();
+        var pPr = new ParagraphProperties(
+            new ParagraphStyleId { Val = $"Requirement{level}" }
         );
-
-        // Add bookmark start
-        string bookmarkIdNum = GetBookmarkId(bookmarkId);
-        para.Append(new BookmarkStart { Id = bookmarkIdNum, Name = bookmarkId });
-
-        // Add the text with a tab to position it at 2cm
-        para.Append(new Run(
-            new TabChar(),
-            new Text(text)
-        ));
-
-        // Add bookmark end
-        para.Append(new BookmarkEnd { Id = bookmarkIdNum });
-
+        para.Append(pPr);
+        para.Append(new Run(new Text(text)));
         return para;
     }
 
-    /// <summary>
-    /// Creates a hyperlink to a bookmark.
-    /// </summary>
-    private static Hyperlink CreateHyperlinkToBookmark(string bookmarkName, string displayText)
-    {
-        return new Hyperlink(
-            new Run(
-                new RunProperties(
-                    new Underline { Val = UnderlineValues.Single },
-                    new Color { Val = "0000FF" }
-                ),
-                new Text(displayText)
-            )
-        )
-        {
-            Anchor = bookmarkName
-        };
-    }
-
-    /// <summary>
-    /// Generates a numeric bookmark ID from a string name.
-    /// </summary>
-    private static readonly Dictionary<string, string> _bookmarkIds = new();
-    private static int _nextBookmarkId = 0;
-
-    private static string GetBookmarkId(string name)
-    {
-        if (!_bookmarkIds.TryGetValue(name, out string? id))
-        {
-            id = (_nextBookmarkId++).ToString();
-            _bookmarkIds[name] = id;
-        }
-        return id;
-    }
 }
