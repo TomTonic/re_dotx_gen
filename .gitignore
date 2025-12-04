@@ -42,3 +42,5 @@ artifacts/
 
 # Generated template files (kept locally for testing)
 output/
+
+.DS_Store
