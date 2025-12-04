@@ -199,7 +199,7 @@ public class Program
             noteStyle.Append(new StyleParagraphProperties(
                 new NumberingProperties(
                     new NumberingLevelReference { Val = 0 },
-                    new NumberingId { Val = i + 2 } // 2 for first, 3 for second, etc.
+                    new NumberingId { Val = 10 + i } // 10 for first, 11 for second, etc.
                 ),
                 new NextParagraphStyle { Val = "REAnonymousPara" }
             ));
@@ -226,22 +226,21 @@ public class Program
         style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REHeading{level - 1}" });
         style.Append(new PrimaryStyle());
 
+        style.Append(new StyleParagraphProperties(
+            new NumberingProperties(
+                new NumberingLevelReference { Val = level - 1 },
+                new NumberingId { Val = 1 }
+            ),
+            new OutlineLevel { Val = 0 }, // Always top level in outline
+            new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            new Tabs(
+                new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+            ),
+            new NextParagraphStyle { Val = $"REIdentifiable{level + 1}" }
+        ));
+
         if (level == 1) // other levels inherit their style from level 1
         {
-            style.Append(new StyleParagraphProperties(
-                //new NumberingProperties(
-                //    new NumberingLevelReference { Val = level - 1 },
-                //    new NumberingId { Val = 1 }
-                //),
-                // new OutlineLevel { Val = level - 1 },
-                // new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
-                // new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
-                // new Tabs(
-                //    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                //),
-                new NextParagraphStyle { Val = $"REIdentifiable{level + 1}" }
-            ));
-
             style.Append(new StyleRunProperties(
                 //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
                 new Bold(),
@@ -278,7 +277,7 @@ public class Program
         style.Append(new StyleParagraphProperties(
             new NumberingProperties(
                 new NumberingLevelReference { Val = numberingLevel },
-                new NumberingId { Val = 1 }
+                new NumberingId { Val = 2 }
             ),
             new OutlineLevel { Val = numberingLevel },
             // new SpacingBetweenLines { Before = "60", After = "60" },
@@ -301,35 +300,43 @@ public class Program
     }
 
     /// <summary>
-    /// Creates the numbering definitions for both Headings and Requirements.
-    /// This creates a single abstract numbering that supports 13 levels total (5 headings + 8 requirements).
-    /// Also creates a separate numbering for Notes.
+    /// Creates the numbering definitions for Headings, Requirements, and Notes.
+    /// Separate abstract numberings for Headings and Requirements to avoid conflicts.
     /// </summary>
     private static Numbering CreateNumbering()
     {
         var numbering = new Numbering();
 
-        // Create the abstract numbering definition for Headings and Requirements
-        var abstractNum = new AbstractNum { AbstractNumberId = 1 };
-        abstractNum.Append(new MultiLevelType { Val = MultiLevelValues.Multilevel });
+        // Create abstract numbering for Headings
+        var headingAbstractNum = new AbstractNum { AbstractNumberId = 1 };
+        headingAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.Multilevel });
 
-        // Word supports a maximum of 9 multilevel list levels (0-8).
-        // Cap the generated levels to avoid Word repair prompts.
-        int totalLevels = Math.Min(HeadingLevels + RequirementLevels, 9);
-
-        for (int i = 0; i < totalLevels; i++)
+        for (int i = 0; i < HeadingLevels; i++)
         {
-            var level = CreateNumberingLevel(i, totalLevels);
-            abstractNum.Append(level);
+            var level = CreateHeadingNumberingLevel(i);
+            headingAbstractNum.Append(level);
         }
 
-        numbering.Append(abstractNum);
+        numbering.Append(headingAbstractNum);
+
+        // Create abstract numbering for Requirements
+        var reqAbstractNum = new AbstractNum { AbstractNumberId = 2 };
+        reqAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.Multilevel });
+
+        int reqLevels = Math.Min(RequirementLevels, 9);
+        for (int i = 0; i < reqLevels; i++)
+        {
+            var level = CreateRequirementNumberingLevel(i);
+            reqAbstractNum.Append(level);
+        }
+
+        numbering.Append(reqAbstractNum);
 
         // Create abstract numbering for each note type
         for (int i = 0; i < NoteTypes.Length; i++)
         {
             var (german, english, text) = NoteTypes[i];
-            var noteAbstractNum = new AbstractNum { AbstractNumberId = i + 2 };
+            var noteAbstractNum = new AbstractNum { AbstractNumberId = i + 3 }; // Start from 3
             noteAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.SingleLevel });
             var noteLevel = new Level(
                 new StartNumberingValue { Val = 1 },
@@ -354,7 +361,7 @@ public class Program
             numbering.Append(noteAbstractNum);
         }
 
-        // Create the numbering instance for Headings/Requirements
+        // Create the numbering instance for Headings
         var numInstance1 = new NumberingInstance(
             new AbstractNumId { Val = 1 }
         )
@@ -362,16 +369,25 @@ public class Program
             NumberID = 1
         };
 
+        // Create the numbering instance for Requirements
+        var numInstance2 = new NumberingInstance(
+            new AbstractNumId { Val = 2 }
+        )
+        {
+            NumberID = 2
+        };
+
         numbering.Append(numInstance1);
+        numbering.Append(numInstance2);
 
         // Create numbering instances for note types
         for (int i = 0; i < NoteTypes.Length; i++)
         {
             var numInstance = new NumberingInstance(
-                new AbstractNumId { Val = i + 2 }
+                new AbstractNumId { Val = i + 3 }
             )
             {
-                NumberID = i + 2
+                NumberID = 10 + i
             };
             numbering.Append(numInstance);
         }
@@ -380,9 +396,9 @@ public class Program
     }
 
     /// <summary>
-    /// Creates a numbering level with the appropriate format.
+    /// Creates a numbering level for Headings.
     /// </summary>
-    private static Level CreateNumberingLevel(int levelIndex, int totalLevels)
+    private static Level CreateHeadingNumberingLevel(int levelIndex)
     {
         // Build the level text format (e.g., "1.", "1.1", "1.1.1", etc.)
         var levelTextBuilder = new StringBuilder();
@@ -393,26 +409,56 @@ public class Program
             levelTextBuilder.Append($"%{j + 1}");
         }
 
-        // Add trailing period only for single-level (first heading)
-        string levelText = levelIndex == 0 ? levelTextBuilder.ToString() + "." : levelTextBuilder.ToString();
+        string levelText = (levelIndex == 0 ? levelTextBuilder.ToString() + "." : levelTextBuilder.ToString()) + "\u2003";
 
         var level = new Level(
             new StartNumberingValue { Val = 1 },
             new NumberingFormat { Val = NumberFormatValues.Decimal },
             new LevelText { Val = levelText },
-            new LevelSuffix { Val = LevelSuffixValues.Tab },
+            new LevelSuffix { Val = LevelSuffixValues.Nothing }, // No suffix for headings
             new LevelJustification { Val = LevelJustificationValues.Left },
             new PreviousParagraphProperties(
                 new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
                 new Tabs(
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
                 )
-            )//,
-             //new NumberingSymbolRunProperties(
-             //    new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-             //    new FontSize { Val = FontSize },
-             //    new FontSizeComplexScript { Val = FontSize }
-             //)
+            )
+        )
+        {
+            LevelIndex = levelIndex
+        };
+
+        return level;
+    }
+
+    /// <summary>
+    /// Creates a numbering level for Requirements.
+    /// </summary>
+    private static Level CreateRequirementNumberingLevel(int levelIndex)
+    {
+        // Build the level text format (e.g., "1.", "1.1", "1.1.1", etc.)
+        var levelTextBuilder = new StringBuilder();
+        for (int j = 0; j <= levelIndex; j++)
+        {
+            if (j > 0)
+                levelTextBuilder.Append('.');
+            levelTextBuilder.Append($"%{j + 1}");
+        }
+
+        string levelText = levelIndex == 0 ? levelTextBuilder.ToString() + "." : levelTextBuilder.ToString();
+
+        var level = new Level(
+            new StartNumberingValue { Val = 1 },
+            new NumberingFormat { Val = NumberFormatValues.Decimal },
+            new LevelText { Val = levelText },
+            new LevelSuffix { Val = LevelSuffixValues.Tab }, // Tab for requirements
+            new LevelJustification { Val = LevelJustificationValues.Left },
+            new PreviousParagraphProperties(
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+                new Tabs(
+                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                )
+            )
         )
         {
             LevelIndex = levelIndex
