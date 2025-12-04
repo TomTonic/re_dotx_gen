@@ -20,6 +20,16 @@ public class Program
     private const int HeadingLevels = 5;
     private const int RequirementLevels = 8;
 
+    // Note types: (german, english, text)
+    private static readonly (string German, string English, string Text)[] NoteTypes = new[]
+    {
+        ("Hinweis", "Note", "Hinweis: "),
+        ("Beispiel", "Example", "Beispiel: "),
+        ("Erläuterung/Begründung", "Rationale", "Erläuterung/Begründung: "),
+        ("Referenz(en)", "References", "Referenz(en): "),
+        ("Ableitung zu", "DerivedFrom", "Ableitung zu: ")
+    };
+
     public static void Main(string[] args)
     {
         string outputPath = args.Length > 0 ? args[0] : "RequirementTemplate.dotx";
@@ -173,27 +183,31 @@ public class Program
         ));
         styles.Append(anonymousParaStyle);
 
-        // Note style
-        var noteStyle = new Style
+        // Create note styles
+        for (int i = 0; i < NoteTypes.Length; i++)
         {
-            Type = StyleValues.Paragraph,
-            CustomStyle = true,
-            StyleId = "RENote"
-        };
-        noteStyle.Append(new StyleName { Val = "RE Hinweis" });
-        noteStyle.Append(new BasedOn { Val = "Normal" });
-        noteStyle.Append(new PrimaryStyle());
-        noteStyle.Append(new StyleParagraphProperties(
-            new NumberingProperties(
-                new NumberingLevelReference { Val = 0 },
-                new NumberingId { Val = 2 }
-            ),
-            new NextParagraphStyle { Val = "REAnonymousPara" }
-        ));
-        noteStyle.Append(new StyleRunProperties(
-            //new Italic()
-        ));
-        styles.Append(noteStyle);
+            var (german, english, text) = NoteTypes[i];
+            var noteStyle = new Style
+            {
+                Type = StyleValues.Paragraph,
+                CustomStyle = true,
+                StyleId = $"RE{english}"
+            };
+            noteStyle.Append(new StyleName { Val = $"RE {german}" });
+            noteStyle.Append(new BasedOn { Val = "Normal" });
+            noteStyle.Append(new PrimaryStyle());
+            noteStyle.Append(new StyleParagraphProperties(
+                new NumberingProperties(
+                    new NumberingLevelReference { Val = 0 },
+                    new NumberingId { Val = i + 2 } // 2 for first, 3 for second, etc.
+                ),
+                new NextParagraphStyle { Val = "REAnonymousPara" }
+            ));
+            noteStyle.Append(new StyleRunProperties(
+                new Italic()
+            ));
+            styles.Append(noteStyle);
+        }
     }
 
     /// <summary>
@@ -311,31 +325,34 @@ public class Program
 
         numbering.Append(abstractNum);
 
-        // Create abstract numbering for Notes
-        var noteAbstractNum = new AbstractNum { AbstractNumberId = 2 };
-        noteAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.SingleLevel });
-        var noteLevel = new Level(
-            new StartNumberingValue { Val = 1 },
-            new NumberingFormat { Val = NumberFormatValues.None }, // No numbering, just text
-            new LevelText { Val = "Hinweis: " },
-            new LevelSuffix { Val = LevelSuffixValues.Nothing }, // No suffix, text is the "bullet"
-            new LevelJustification { Val = LevelJustificationValues.Left },
-            new PreviousParagraphProperties(
-                new Indentation { Left = TextIndentTwips.ToString(), Hanging = "0" },
-                new Tabs(
-                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                )
-            ),
-            new NumberingSymbolRunProperties(
-                new Bold()
-            )
-        )
+        // Create abstract numbering for each note type
+        for (int i = 0; i < NoteTypes.Length; i++)
         {
-            LevelIndex = 0
-        };
-        noteAbstractNum.Append(noteLevel);
-
-        numbering.Append(noteAbstractNum);
+            var (german, english, text) = NoteTypes[i];
+            var noteAbstractNum = new AbstractNum { AbstractNumberId = i + 2 };
+            noteAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.SingleLevel });
+            var noteLevel = new Level(
+                new StartNumberingValue { Val = 1 },
+                new NumberingFormat { Val = NumberFormatValues.None }, // No numbering, just text
+                new LevelText { Val = text },
+                new LevelSuffix { Val = LevelSuffixValues.Nothing }, // No suffix, text is the "bullet"
+                new LevelJustification { Val = LevelJustificationValues.Left },
+                new PreviousParagraphProperties(
+                    new Indentation { Left = TextIndentTwips.ToString(), Hanging = "0" },
+                    new Tabs(
+                        new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                    )
+                ),
+                new NumberingSymbolRunProperties(
+                    new Bold()
+                )
+            )
+            {
+                LevelIndex = 0
+            };
+            noteAbstractNum.Append(noteLevel);
+            numbering.Append(noteAbstractNum);
+        }
 
         // Create the numbering instance for Headings/Requirements
         var numInstance1 = new NumberingInstance(
@@ -345,16 +362,19 @@ public class Program
             NumberID = 1
         };
 
-        // Create the numbering instance for Notes
-        var numInstance2 = new NumberingInstance(
-            new AbstractNumId { Val = 2 }
-        )
-        {
-            NumberID = 2
-        };
-
         numbering.Append(numInstance1);
-        numbering.Append(numInstance2);
+
+        // Create numbering instances for note types
+        for (int i = 0; i < NoteTypes.Length; i++)
+        {
+            var numInstance = new NumberingInstance(
+                new AbstractNumId { Val = i + 2 }
+            )
+            {
+                NumberID = i + 2
+            };
+            numbering.Append(numInstance);
+        }
 
         return numbering;
     }
@@ -442,16 +462,22 @@ public class Program
 
         // Matching RequirementN under each HN
         body.Append(CreateRequirementParagraph(1, "Requirement for H1 under deep example."));
-        body.Append(CreateRequirementParagraph(2, "Requirement for H2."));
-        body.Append(CreateNoteParagraph(2, "Some hints on Level 2."));
+        body.Append(CreateNoteParagraph("RENote", "Some hints on Level 2."));
         body.Append(CreateAnonParagraph(2, "Second, anonymous for H2."));
         body.Append(CreateRequirementParagraph(3, "Requirement for H3."));
         body.Append(CreateRequirementParagraph(4, "Requirement for H4."));
         body.Append(CreateRequirementParagraph(5, "Requirement at level 5."));
-        body.Append(CreateNoteParagraph(5, "Second Note for level 5."));
+        body.Append(CreateNoteParagraph("RENote", "Second Note for level 5."));
         body.Append(CreateRequirementParagraph(6, "Requirement at level 6."));
         body.Append(CreateRequirementParagraph(7, "Requirement at level 7."));
         body.Append(CreateRequirementParagraph(8, "Requirement at level 8."));
+
+        // Add examples for all note types
+        for (int i = 0; i < NoteTypes.Length; i++)
+        {
+            var (german, english, _) = NoteTypes[i];
+            body.Append(CreateNoteParagraph($"RE{english}", $"Example for {german}."));
+        }
 
         // Add instructions
         body.Append(new Paragraph(new Run(new Text(" "))));
@@ -517,11 +543,11 @@ public class Program
         return para;
     }
 
-    private static Paragraph CreateNoteParagraph(int level, string text)
+    private static Paragraph CreateNoteParagraph(string styleId, string text)
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
-            new ParagraphStyleId { Val = $"RENote" }
+            new ParagraphStyleId { Val = styleId }
         );
         para.Append(pPr);
         para.Append(new Run(new Text(text)));
