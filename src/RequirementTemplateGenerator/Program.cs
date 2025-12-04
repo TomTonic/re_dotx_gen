@@ -92,6 +92,9 @@ public class Program
         // Add document defaults
         styles.Append(CreateDocDefaults());
 
+        // Create singular styles
+        CreateSingularStyles(styles);
+
         // Phase 1: create shells for all styles
         //AddStyleShells(styles);
 
@@ -135,90 +138,62 @@ public class Program
         );
     }
 
-    private static void AddStyleShells(Styles styles)
+    private static void CreateSingularStyles(Styles styles)
     {
+        // Normal style - required base style so references to it work
         var normalStyle = new Style
         {
             Type = StyleValues.Paragraph,
             StyleId = "Normal"
         };
         normalStyle.Append(new StyleName { Val = "Normal" });
+        normalStyle.Append(new StyleRunProperties(
+            new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+            new FontSize { Val = FontSize },
+            new FontSizeComplexScript { Val = FontSize }
+        ));
         styles.Append(normalStyle);
 
-        // Headings H1..H5
-        for (int i = 1; i <= HeadingLevels; i++)
+        // Anonymous paragraph style
+        var anonymousParaStyle = new Style
         {
-            var s = new Style
-            {
-                Type = StyleValues.Paragraph,
-                CustomStyle = true,
-                StyleId = $"REHeading{i}"
-            };
-            s.Append(new StyleName { Val = $"REHeading{i}" });
-            styles.Append(s);
-        }
+            Type = StyleValues.Paragraph,
+            CustomStyle = true,
+            StyleId = "REAnonymousPara"
+        };
+        anonymousParaStyle.Append(new StyleName { Val = "RE Absatz" });
+        anonymousParaStyle.Append(new BasedOn { Val = "Normal" });
+        anonymousParaStyle.Append(new PrimaryStyle());
+        anonymousParaStyle.Append(new StyleParagraphProperties(
+            new Indentation { Left = TextIndentTwips.ToString() },
+            new NextParagraphStyle { Val = "REAnonymousPara" }
+        ));
+        anonymousParaStyle.Append(new StyleRunProperties(
+            //new Italic()
+        ));
+        styles.Append(anonymousParaStyle);
 
-        // Requirements 1..8
-        for (int i = 1; i <= RequirementLevels; i++)
+        // Note style
+        var noteStyle = new Style
         {
-            var s = new Style
-            {
-                Type = StyleValues.Paragraph,
-                CustomStyle = true,
-                StyleId = $"Requirement{i}"
-            };
-            s.Append(new StyleName { Val = $"Requirement {i}" });
-            styles.Append(s);
-        }
-    }
-
-    private static void PopulateStyleProperties(Styles styles)
-    {
-        for (int level = 1; level <= HeadingLevels; level++)
-        {
-            var style = styles.Elements<Style>().First(s => s.StyleId == $"REHeading{level}");
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REHeading{level - 1}" });
-            style.Append(new PrimaryStyle());
-            style.Append(new StyleParagraphProperties(
-                new NumberingProperties(
-                    new NumberingLevelReference { Val = level - 1 },
-                    new NumberingId { Val = 1 }
-                ),
-                new OutlineLevel { Val = level - 1 },
-                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
-                new Tabs(
-                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                ),
-                new NextParagraphStyle { Val = $"Requirement{level + 1}" }
-            ));
-            style.Append(new StyleRunProperties(
-                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-                new Bold(),
-                new FontSize { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } },
-                new FontSizeComplexScript { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } }
-            ));
-        }
-
-        for (int level = 1; level <= RequirementLevels; level++)
-        {
-            var style = styles.Elements<Style>().First(s => s.StyleId == $"REIdentifiable{level}");
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
-            style.Append(new PrimaryStyle());
-            style.Append(new StyleParagraphProperties(
-                new NumberingProperties(
-                    new NumberingLevelReference { Val = level },
-                    new NumberingId { Val = 2 }
-                ),
-                new OutlineLevel { Val = level },
-                new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
-                new Tabs(
-                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                ),
-                new NextParagraphStyle { Val = $"REIdentifiable{level}" }
-            ));
-            // BasedOn chain:
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
-        }
+            Type = StyleValues.Paragraph,
+            CustomStyle = true,
+            StyleId = "RENote"
+        };
+        noteStyle.Append(new StyleName { Val = "RE Hinweis" });
+        noteStyle.Append(new BasedOn { Val = "Normal" });
+        noteStyle.Append(new PrimaryStyle());
+        noteStyle.Append(new StyleParagraphProperties(
+            new NumberingProperties(
+                new NumberingLevelReference { Val = 0 },
+                new NumberingId { Val = 2 }
+            ),
+            new NextParagraphStyle { Val = "REAnonymousPara" }
+        ));
+        noteStyle.Append(new StyleRunProperties(
+            //new Italic()
+        ));
+        styles.Append(noteStyle);
     }
 
     /// <summary>
@@ -314,12 +289,13 @@ public class Program
     /// <summary>
     /// Creates the numbering definitions for both Headings and Requirements.
     /// This creates a single abstract numbering that supports 13 levels total (5 headings + 8 requirements).
+    /// Also creates a separate numbering for Notes.
     /// </summary>
     private static Numbering CreateNumbering()
     {
         var numbering = new Numbering();
 
-        // Create the abstract numbering definition
+        // Create the abstract numbering definition for Headings and Requirements
         var abstractNum = new AbstractNum { AbstractNumberId = 1 };
         abstractNum.Append(new MultiLevelType { Val = MultiLevelValues.Multilevel });
 
@@ -335,7 +311,33 @@ public class Program
 
         numbering.Append(abstractNum);
 
-        // Create the numbering instance
+        // Create abstract numbering for Notes
+        var noteAbstractNum = new AbstractNum { AbstractNumberId = 2 };
+        noteAbstractNum.Append(new MultiLevelType { Val = MultiLevelValues.SingleLevel });
+        var noteLevel = new Level(
+            new StartNumberingValue { Val = 1 },
+            new NumberingFormat { Val = NumberFormatValues.None }, // No numbering, just text
+            new LevelText { Val = "Hinweis: " },
+            new LevelSuffix { Val = LevelSuffixValues.Nothing }, // No suffix, text is the "bullet"
+            new LevelJustification { Val = LevelJustificationValues.Left },
+            new PreviousParagraphProperties(
+                new Indentation { Left = TextIndentTwips.ToString(), Hanging = "0" },
+                new Tabs(
+                    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                )
+            ),
+            new NumberingSymbolRunProperties(
+                new Bold()
+            )
+        )
+        {
+            LevelIndex = 0
+        };
+        noteAbstractNum.Append(noteLevel);
+
+        numbering.Append(noteAbstractNum);
+
+        // Create the numbering instance for Headings/Requirements
         var numInstance1 = new NumberingInstance(
             new AbstractNumId { Val = 1 }
         )
@@ -343,15 +345,16 @@ public class Program
             NumberID = 1
         };
 
-        //var numInstance2 = new NumberingInstance(
-        //    new AbstractNumId { Val = 1 }
-        //)
-        //{
-        //    NumberID = 2
-        //};
+        // Create the numbering instance for Notes
+        var numInstance2 = new NumberingInstance(
+            new AbstractNumId { Val = 2 }
+        )
+        {
+            NumberID = 2
+        };
 
         numbering.Append(numInstance1);
-        //numbering.Append(numInstance2);
+        numbering.Append(numInstance2);
 
         return numbering;
     }
@@ -440,9 +443,12 @@ public class Program
         // Matching RequirementN under each HN
         body.Append(CreateRequirementParagraph(1, "Requirement for H1 under deep example."));
         body.Append(CreateRequirementParagraph(2, "Requirement for H2."));
+        body.Append(CreateNoteParagraph(2, "Some hints on Level 2."));
+        body.Append(CreateAnonParagraph(2, "Second, anonymous for H2."));
         body.Append(CreateRequirementParagraph(3, "Requirement for H3."));
         body.Append(CreateRequirementParagraph(4, "Requirement for H4."));
         body.Append(CreateRequirementParagraph(5, "Requirement at level 5."));
+        body.Append(CreateNoteParagraph(5, "Second Note for level 5."));
         body.Append(CreateRequirementParagraph(6, "Requirement at level 6."));
         body.Append(CreateRequirementParagraph(7, "Requirement at level 7."));
         body.Append(CreateRequirementParagraph(8, "Requirement at level 8."));
@@ -511,4 +517,26 @@ public class Program
         return para;
     }
 
+    private static Paragraph CreateNoteParagraph(int level, string text)
+    {
+        var para = new Paragraph();
+        var pPr = new ParagraphProperties(
+            new ParagraphStyleId { Val = $"RENote" }
+        );
+        para.Append(pPr);
+        para.Append(new Run(new Text(text)));
+        return para;
+    }
+
+
+    private static Paragraph CreateAnonParagraph(int level, string text)
+    {
+        var para = new Paragraph();
+        var pPr = new ParagraphProperties(
+            new ParagraphStyleId { Val = $"REAnonymousPara" }
+        );
+        para.Append(pPr);
+        para.Append(new Run(new Text(text)));
+        return para;
+    }
 }
