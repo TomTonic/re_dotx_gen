@@ -2,8 +2,6 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.Text;
-using System.IO;
-using System.IO.Compression;
 
 namespace RequirementTemplateGenerator;
 
@@ -121,7 +119,7 @@ public class Program
     }
 
     /// <summary>
-    /// Creates document defaults with 11pt font.
+    /// Creates document defaults with 11pt font and single line spacing.
     /// </summary>
     private static DocDefaults CreateDocDefaults()
     {
@@ -131,6 +129,11 @@ public class Program
                     new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
                     new FontSize { Val = FontSize },
                     new FontSizeComplexScript { Val = FontSize }
+                )
+            ),
+            new ParagraphPropertiesDefault(
+                new ParagraphPropertiesBaseStyle(
+                    new SpacingBetweenLines { LineRule = LineSpacingRuleValues.Auto }
                 )
             )
         );
@@ -164,6 +167,7 @@ public class Program
         anonymousParaStyle.Append(new PrimaryStyle());
         anonymousParaStyle.Append(new StyleParagraphProperties(
             new Indentation { Left = TextIndentTwips.ToString() },
+            new SpacingBetweenLines { Before = "120" },
             new NextParagraphStyle { Val = "REAnonymousPara" }
         ));
         anonymousParaStyle.Append(new StyleRunProperties(
@@ -189,6 +193,7 @@ public class Program
                     new NumberingLevelReference { Val = 0 },
                     new NumberingId { Val = 10 + i } // 10 for first, 11 for second, etc.
                 ),
+                new SpacingBetweenLines { Before = "120" },
                 new NextParagraphStyle { Val = "REAnonymousPara" }
             ));
             noteStyle.Append(new StyleRunProperties(
@@ -220,6 +225,7 @@ public class Program
                 new NumberingId { Val = 1 }
             ),
             new OutlineLevel { Val = 0 }, // Always top level in outline
+            new SpacingBetweenLines { Before = "360", After = "120" }, // 6pt spacing before and after headings
             new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
@@ -265,6 +271,7 @@ public class Program
                 new NumberingId { Val = 2 }
             ),
             new OutlineLevel { Val = numberingLevel },
+            new SpacingBetweenLines { Before = "180" }, // 6pt spacing before requirements
             new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
