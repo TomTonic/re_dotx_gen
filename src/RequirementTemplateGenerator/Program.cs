@@ -105,13 +105,6 @@ public class Program
         // Create singular styles
         CreateSingularStyles(styles);
 
-        // Phase 1: create shells for all styles
-        //AddStyleShells(styles);
-
-        // Phase 2: fill properties (called after AddStyleShells)
-        //PopulateStyleProperties(styles);
-
-
         // Add Requirement styles (1-8)
         for (int level = 1; level <= RequirementLevels; level++)
         {
@@ -139,12 +132,7 @@ public class Program
                     new FontSize { Val = FontSize },
                     new FontSizeComplexScript { Val = FontSize }
                 )
-            )//,
-             //new ParagraphPropertiesDefault(
-             //    new ParagraphPropertiesBaseStyle(
-             //        new SpacingBetweenLines { After = "200", Line = "276", LineRule = LineSpacingRuleValues.Auto }
-             //    )
-             //)
+            )
         );
     }
 
@@ -171,7 +159,7 @@ public class Program
             CustomStyle = true,
             StyleId = "REAnonymousPara"
         };
-        anonymousParaStyle.Append(new StyleName { Val = "RE Absatz" });
+        anonymousParaStyle.Append(new StyleName { Val = "RE Ergänzung - Absatz" });
         anonymousParaStyle.Append(new BasedOn { Val = "Normal" });
         anonymousParaStyle.Append(new PrimaryStyle());
         anonymousParaStyle.Append(new StyleParagraphProperties(
@@ -179,7 +167,7 @@ public class Program
             new NextParagraphStyle { Val = "REAnonymousPara" }
         ));
         anonymousParaStyle.Append(new StyleRunProperties(
-            //new Italic()
+            new Italic()
         ));
         styles.Append(anonymousParaStyle);
 
@@ -193,7 +181,7 @@ public class Program
                 CustomStyle = true,
                 StyleId = $"RE{english}"
             };
-            noteStyle.Append(new StyleName { Val = $"RE {german}" });
+            noteStyle.Append(new StyleName { Val = $"RE Ergänzung - {german}" });
             noteStyle.Append(new BasedOn { Val = "Normal" });
             noteStyle.Append(new PrimaryStyle());
             noteStyle.Append(new StyleParagraphProperties(
@@ -222,7 +210,7 @@ public class Program
             StyleId = $"REHeading{level}"
         };
 
-        style.Append(new StyleName { Val = $"RE Heading {level}" });
+        style.Append(new StyleName { Val = $"RE Überschrift {level}" });
         style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REHeading{level - 1}" });
         style.Append(new PrimaryStyle());
 
@@ -236,18 +224,15 @@ public class Program
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
             ),
-            new NextParagraphStyle { Val = $"REIdentifiable{level + 1}" }
+            new NextParagraphStyle { Val = $"RERequirement{level + 1}" }
         ));
 
         if (level == 1) // other levels inherit their style from level 1
         {
             style.Append(new StyleRunProperties(
-                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
                 new Bold(),
                 new FontSize { Val = FontSizeH },
                 new FontSizeComplexScript { Val = FontSizeH }
-                //new FontSize { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } },
-                //new FontSizeComplexScript { Val = level switch { 1 => "24", 2 => "24", 3 => "26", 4 => "24", _ => FontSize } }
             ));
         }
 
@@ -267,11 +252,11 @@ public class Program
         {
             Type = StyleValues.Paragraph,
             CustomStyle = true,
-            StyleId = $"REIdentifiable{level}"
+            StyleId = $"RERequirement{level}"
         };
 
-        style.Append(new StyleName { Val = $"RE Identifiable {level}" });
-        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
+        style.Append(new StyleName { Val = $"RE Anforderung {level}" });
+        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"RERequirement{level - 1}" });
         style.Append(new PrimaryStyle());
 
         style.Append(new StyleParagraphProperties(
@@ -280,17 +265,15 @@ public class Program
                 new NumberingId { Val = 2 }
             ),
             new OutlineLevel { Val = numberingLevel },
-            // new SpacingBetweenLines { Before = "60", After = "60" },
             new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
             ),
-            new NextParagraphStyle { Val = $"REIdentifiable{level}" }
+            new NextParagraphStyle { Val = $"RERequirement{level}" }
         ));
         if (level == 1) // other levels inherit their style from level 1
         {
             style.Append(new StyleRunProperties(
-                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
                 new FontSize { Val = FontSize },
                 new FontSizeComplexScript { Val = FontSize }
             ));
@@ -409,7 +392,7 @@ public class Program
             levelTextBuilder.Append($"%{j + 1}");
         }
 
-        string levelText = (levelIndex == 0 ? levelTextBuilder.ToString() + "." : levelTextBuilder.ToString()) + "\u2003";
+        string levelText = (levelIndex == 0 ? levelTextBuilder.ToString() + "." : levelTextBuilder.ToString()) + " ";
 
         var level = new Level(
             new StartNumberingValue { Val = 1 },
@@ -582,7 +565,7 @@ public class Program
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
-            new ParagraphStyleId { Val = $"REIdentifiable{level}" }
+            new ParagraphStyleId { Val = $"RERequirement{level}" }
         );
         para.Append(pPr);
         para.Append(new Run(new Text(text)));
