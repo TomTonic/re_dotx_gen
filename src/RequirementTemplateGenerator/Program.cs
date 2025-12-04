@@ -463,71 +463,57 @@ public class Program
     private static void AddSampleContent(Body body)
     {
         // Add a title
-        body.Append(CreateTitleParagraph("Requirement Document Template"));
+        body.Append(CreateTitleParagraph("Anforderungsdokument-Vorlage"));
 
         // H1 + Requirement1 examples
-        body.Append(CreateHeadingParagraph(1, "Introduction"));
-        body.Append(CreateRequirementParagraph(1, "Requirement for H1: top-level requirement."));
-        body.Append(CreateRequirementParagraph(1, "Requirement for H1: another top-level requirement."));
+        body.Append(CreateHeadingParagraph(1, "Einleitung"));
+        body.Append(CreateRequirementParagraph(1, "Das System MUSS eine Benutzerverwaltung bereitstellen."));
+        body.Append(CreateRequirementParagraph(1, "Das System MUSS Sicherheitsmechanismen implementieren."));
 
         // Nested requirement
-        body.Append(CreateRequirementParagraph(2, "This is a nested requirement (level 2)."));
-        body.Append(CreateRequirementParagraph(3, "This is a deeply nested requirement (level 3)."));
+        body.Append(CreateRequirementParagraph(2, "Das System MUSS Benutzerrollen unterstützen."));
+        body.Append(CreateRequirementParagraph(3, "Das System MUSS Administratorrechte vergeben können."));
 
         // H2 + Requirement2 example
-        body.Append(CreateHeadingParagraph(2, "Background"));
-        body.Append(CreateRequirementParagraph(2, "Requirement for H2."));
+        body.Append(CreateHeadingParagraph(2, "Hintergrund"));
+        body.Append(CreateRequirementParagraph(2, "Das System SOLL skalierbar sein."));
+        body.Append(CreateNoteParagraph("RENote", "Die Skalierbarkeit bezieht sich auf die Fähigkeit des Systems, mit wachsenden Benutzerzahlen und Datenmengen umzugehen. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."));
 
         // H1 + Requirement1 again
-        body.Append(CreateHeadingParagraph(1, "Functional Requirements"));
-        body.Append(CreateRequirementParagraph(1, "The system shall provide user authentication."));
-        body.Append(CreateRequirementParagraph(2, "Users shall be able to log in with username and password."));
-        body.Append(CreateRequirementParagraph(2, "Users shall be able to reset their password via email."));
-        body.Append(CreateRequirementParagraph(1, "The system shall support data export."));
+        body.Append(CreateHeadingParagraph(1, "Funktionale Anforderungen"));
+        body.Append(CreateRequirementParagraph(1, "Das System MUSS Benutzerauthentifizierung bereitstellen."));
+        body.Append(CreateRequirementParagraph(2, "Benutzer MÜSSEN sich mit Benutzername und Passwort anmelden können."));
+        body.Append(CreateRequirementParagraph(2, "Benutzer MÜSSEN ihr Passwort per E-Mail zurücksetzen können."));
+        body.Append(CreateRequirementParagraph(1, "Das System MUSS Datenexport unterstützen."));
+        body.Append(CreateNoteParagraph("REExample", "Ein Benutzer meldet sich mit dem Benutzernamen 'max.mustermann' und dem Passwort 'geheim123' an. Nach erfolgreicher Authentifizierung erhält er Zugriff auf seine persönlichen Daten. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."));
 
         // H2 + Requirement2
-        body.Append(CreateHeadingParagraph(2, "Performance Requirements"));
-        body.Append(CreateRequirementParagraph(2, "Response time shall be under 2 seconds."));
+        body.Append(CreateHeadingParagraph(2, "Leistungsanforderungen"));
+        body.Append(CreateRequirementParagraph(2, "Die Antwortzeit DARF 2 Sekunden nicht überschreiten."));
+        body.Append(CreateNoteParagraph("RERationale", "Die Antwortzeit von maximal 2 Sekunden ist notwendig, um eine gute Benutzererfahrung zu gewährleisten. Studien zeigen, dass Benutzer bei längeren Wartezeiten ungeduldig werden und Das System möglicherweise verlassen. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium."));
 
         // Demonstrate all heading levels with matching RequirementN
-        body.Append(CreateHeadingParagraph(1, "Deep Nesting Example"));
-        body.Append(CreateHeadingParagraph(2, "Level 2 Heading"));
-        body.Append(CreateHeadingParagraph(3, "Level 3 Heading"));
-        body.Append(CreateHeadingParagraph(4, "Level 4 Heading"));
-        body.Append(CreateHeadingParagraph(5, "Level 5 Heading"));
+        body.Append(CreateHeadingParagraph(1, "Verschachtelungsbeispiel"));
+        body.Append(CreateHeadingParagraph(2, "Ebene 2 Überschrift"));
+        body.Append(CreateHeadingParagraph(3, "Ebene 3 Überschrift"));
+        body.Append(CreateHeadingParagraph(4, "Ebene 4 Überschrift"));
+        body.Append(CreateHeadingParagraph(5, "Ebene 5 Überschrift"));
 
         // Matching RequirementN under each HN
-        body.Append(CreateRequirementParagraph(1, "Requirement for H1 under deep example."));
-        body.Append(CreateNoteParagraph("RENote", "Some hints on Level 2."));
-        body.Append(CreateAnonParagraph(2, "Second, anonymous for H2."));
-        body.Append(CreateRequirementParagraph(3, "Requirement for H3."));
-        body.Append(CreateRequirementParagraph(4, "Requirement for H4."));
-        body.Append(CreateRequirementParagraph(5, "Requirement at level 5."));
-        body.Append(CreateNoteParagraph("RENote", "Second Note for level 5."));
-        body.Append(CreateRequirementParagraph(6, "Requirement at level 6."));
-        body.Append(CreateRequirementParagraph(7, "Requirement at level 7."));
-        body.Append(CreateRequirementParagraph(8, "Requirement at level 8."));
+        body.Append(CreateRequirementParagraph(1, "Das System MUSS modulare Architektur aufweisen."));
+        body.Append(CreateNoteParagraph("RENote", "Die modulare Architektur ermöglicht eine bessere Wartbarkeit und Erweiterbarkeit des Systems. Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
+        body.Append(CreateAnonParagraph(2, "Zweitens, anonymer Absatz für Ebene 2."));
+        body.Append(CreateRequirementParagraph(3, "Module MÜSSEN unabhängig testbar sein."));
+        body.Append(CreateRequirementParagraph(4, "Schnittstellen MÜSSEN dokumentiert werden."));
+        body.Append(CreateRequirementParagraph(5, "Die Dokumentation MUSS aktuell gehalten werden."));
+        body.Append(CreateNoteParagraph("RENote", "Zweiter Hinweis für Ebene 5. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam."));
+        body.Append(CreateRequirementParagraph(6, "Testfälle MÜSSEN automatisiert werden."));
+        body.Append(CreateRequirementParagraph(7, "Berichte MÜSSEN generiert werden können."));
+        body.Append(CreateRequirementParagraph(8, "Die Berichte MÜSSEN exportierbar sein."));
 
         // Add examples for all note types
-        for (int i = 0; i < NoteTypes.Length; i++)
-        {
-            var (german, english, _) = NoteTypes[i];
-            body.Append(CreateNoteParagraph($"RE{english}", $"Example for {german}."));
-        }
-
-        // Add instructions
-        body.Append(new Paragraph(new Run(new Text(" "))));
-        body.Append(new Paragraph(
-            new Run(
-                new RunProperties(new Italic()),
-                new Text("Instructions: Apply the 'Heading X' styles for section headers and 'Requirement X' styles for requirements. Use Tab to adjust indent levels.")
-            )
-        ));
-
-        // Add cross-reference example (plain text; bookmarking removed)
-        body.Append(new Paragraph(
-            new Run(new Text("Example cross-reference: See Requirement 2.1 for authentication requirements."))
-        ));
+        body.Append(CreateNoteParagraph("REReferences", "ISO/IEC 25010:2011 - Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."));
+        body.Append(CreateNoteParagraph("REDerivedFrom", "Kundenanforderung KA-001 vom 15.03.2024. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."));
     }
 
     /// <summary>
