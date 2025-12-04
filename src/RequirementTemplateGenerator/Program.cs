@@ -14,6 +14,7 @@ public class Program
 {
     // Constants for formatting
     private const string FontName = "Arial";
+    private const string FontSizeH = "24"; // 12pt = 24 half-points
     private const string FontSize = "22"; // 11pt = 22 half-points
     private const int TextIndentTwips = 1701; // 3cm = 1701 twips (567 twips per cm)
     private const int HeadingLevels = 5;
@@ -105,10 +106,10 @@ public class Program
         }
 
         // Add H styles (H1-H5, not built-in Heading styles)
-        //for (int level = 1; level <= HeadingLevels; level++)
-        //{
-        //    styles.Append(CreateHeadingStyle(level));
-        //}
+        for (int level = 1; level <= HeadingLevels; level++)
+        {
+            styles.Append(CreateHeadingStyle(level));
+        }
 
         return styles;
     }
@@ -125,12 +126,12 @@ public class Program
                     new FontSize { Val = FontSize },
                     new FontSizeComplexScript { Val = FontSize }
                 )
-            ),
-            new ParagraphPropertiesDefault(
-                new ParagraphPropertiesBaseStyle(
-                    new SpacingBetweenLines { After = "200", Line = "276", LineRule = LineSpacingRuleValues.Auto }
-                )
-            )
+            )//,
+             //new ParagraphPropertiesDefault(
+             //    new ParagraphPropertiesBaseStyle(
+             //        new SpacingBetweenLines { After = "200", Line = "276", LineRule = LineSpacingRuleValues.Auto }
+             //    )
+             //)
         );
     }
 
@@ -151,9 +152,9 @@ public class Program
             {
                 Type = StyleValues.Paragraph,
                 CustomStyle = true,
-                StyleId = $"H{i}"
+                StyleId = $"REHeading{i}"
             };
-            s.Append(new StyleName { Val = $"H{i}" });
+            s.Append(new StyleName { Val = $"REHeading{i}" });
             styles.Append(s);
         }
 
@@ -175,8 +176,8 @@ public class Program
     {
         for (int level = 1; level <= HeadingLevels; level++)
         {
-            var style = styles.Elements<Style>().First(s => s.StyleId == $"H{level}");
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"H{level - 1}" });
+            var style = styles.Elements<Style>().First(s => s.StyleId == $"REHeading{level}");
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REHeading{level - 1}" });
             style.Append(new PrimaryStyle());
             style.Append(new StyleParagraphProperties(
                 new NumberingProperties(
@@ -188,10 +189,10 @@ public class Program
                 new Tabs(
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
                 ),
-                new NextParagraphStyle { Val = $"Requirement{level+1}" }
+                new NextParagraphStyle { Val = $"Requirement{level + 1}" }
             ));
             style.Append(new StyleRunProperties(
-                new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
                 new Bold(),
                 new FontSize { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } },
                 new FontSizeComplexScript { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } }
@@ -200,8 +201,8 @@ public class Program
 
         for (int level = 1; level <= RequirementLevels; level++)
         {
-            var style = styles.Elements<Style>().First(s => s.StyleId == $"Requirement{level}");
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level - 1}" });
+            var style = styles.Elements<Style>().First(s => s.StyleId == $"REIdentifiable{level}");
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
             style.Append(new PrimaryStyle());
             style.Append(new StyleParagraphProperties(
                 new NumberingProperties(
@@ -213,10 +214,10 @@ public class Program
                 new Tabs(
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
                 ),
-                new NextParagraphStyle { Val = $"Requirement{level}" }
+                new NextParagraphStyle { Val = $"REIdentifiable{level}" }
             ));
             // BasedOn chain:
-            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level-1}" });
+            style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
         }
     }
 
@@ -229,33 +230,38 @@ public class Program
         {
             Type = StyleValues.Paragraph,
             CustomStyle = true,
-            StyleId = $"H{level}"
+            StyleId = $"REHeading{level}"
         };
 
-        style.Append(new StyleName { Val = $"H{level}" });
-        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"H{level - 1}" });
+        style.Append(new StyleName { Val = $"RE Heading {level}" });
+        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REHeading{level - 1}" });
         style.Append(new PrimaryStyle());
 
-        style.Append(new StyleParagraphProperties(
-            new NumberingProperties(
-                new NumberingLevelReference { Val = level - 1 },
-                new NumberingId { Val = 1 }
-            ),
-            new OutlineLevel { Val = level - 1 },
-            // new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
-            new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
-            new Tabs(
-                new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-            ),
-            new NextParagraphStyle { Val = $"Requirement{level+1}" }
-        ));
+        if (level == 1) // other levels inherit their style from level 1
+        {
+            style.Append(new StyleParagraphProperties(
+                //new NumberingProperties(
+                //    new NumberingLevelReference { Val = level - 1 },
+                //    new NumberingId { Val = 1 }
+                //),
+                // new OutlineLevel { Val = level - 1 },
+                // new SpacingBetweenLines { Before = level == 1 ? "480" : "240", After = "120" },
+                // new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+                // new Tabs(
+                //    new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                //),
+                new NextParagraphStyle { Val = $"REIdentifiable{level + 1}" }
+            ));
 
-        style.Append(new StyleRunProperties(
-            new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-            new Bold(),
-            new FontSize { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } },
-            new FontSizeComplexScript { Val = level switch { 1 => "32", 2 => "28", 3 => "26", 4 => "24", _ => FontSize } }
-        ));
+            style.Append(new StyleRunProperties(
+                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+                new Bold(),
+                new FontSize { Val = FontSizeH },
+                new FontSizeComplexScript { Val = FontSizeH }
+                //new FontSize { Val = level switch { 1 => "24", 2 => "24", 3 => "24", 4 => "24", _ => FontSize } },
+                //new FontSizeComplexScript { Val = level switch { 1 => "24", 2 => "24", 3 => "26", 4 => "24", _ => FontSize } }
+            ));
+        }
 
         return style;
     }
@@ -267,17 +273,17 @@ public class Program
     private static Style CreateRequirementStyle(int level)
     {
         // Map RequirementN to ilvl N (0-based), clamped to Word's 9-level max
-        int numberingLevel = Math.Min(level, 8);
+        int numberingLevel = Math.Min(level, 9) - 1;
 
         var style = new Style
         {
             Type = StyleValues.Paragraph,
             CustomStyle = true,
-            StyleId = $"Requirement{level}"
+            StyleId = $"REIdentifiable{level}"
         };
 
-        style.Append(new StyleName { Val = $"Requirement {level}" });
-        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"Requirement{level - 1}" });
+        style.Append(new StyleName { Val = $"RE Identifiable {level}" });
+        style.Append(new BasedOn { Val = level == 1 ? "Normal" : $"REIdentifiable{level - 1}" });
         style.Append(new PrimaryStyle());
 
         style.Append(new StyleParagraphProperties(
@@ -291,14 +297,16 @@ public class Program
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
             ),
-            new NextParagraphStyle { Val = $"Requirement{level}" }
+            new NextParagraphStyle { Val = $"REIdentifiable{level}" }
         ));
-
-        style.Append(new StyleRunProperties(
-            new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-            new FontSize { Val = FontSize },
-            new FontSizeComplexScript { Val = FontSize }
-        ));
+        if (level == 1) // other levels inherit their style from level 1
+        {
+            style.Append(new StyleRunProperties(
+                //new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+                new FontSize { Val = FontSize },
+                new FontSizeComplexScript { Val = FontSize }
+            ));
+        }
 
         return style;
     }
@@ -377,11 +385,11 @@ public class Program
                     new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
                 )
             )//,
-            //new NumberingSymbolRunProperties(
-            //    new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
-            //    new FontSize { Val = FontSize },
-            //    new FontSizeComplexScript { Val = FontSize }
-            //)
+             //new NumberingSymbolRunProperties(
+             //    new RunFonts { Ascii = FontName, HighAnsi = FontName, ComplexScript = FontName },
+             //    new FontSize { Val = FontSize },
+             //    new FontSizeComplexScript { Val = FontSize }
+             //)
         )
         {
             LevelIndex = levelIndex
@@ -482,7 +490,7 @@ public class Program
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
-            new ParagraphStyleId { Val = $"H{level}" }
+            new ParagraphStyleId { Val = $"REHeading{level}" }
         );
         para.Append(pPr);
         para.Append(new Run(new Text(text)));
@@ -496,7 +504,7 @@ public class Program
     {
         var para = new Paragraph();
         var pPr = new ParagraphProperties(
-            new ParagraphStyleId { Val = $"Requirement{level}" }
+            new ParagraphStyleId { Val = $"REIdentifiable{level}" }
         );
         para.Append(pPr);
         para.Append(new Run(new Text(text)));
