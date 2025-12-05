@@ -80,6 +80,9 @@ public class Program
             var numberingPart = mainPart.AddNewPart<NumberingDefinitionsPart>();
             numberingPart.Numbering = CreateNumbering();
 
+            // Add document settings (compatibility)
+            AddDocumentSettings(mainPart);
+
             // Add sample content to demonstrate the styles
             AddSampleContent(mainPart.Document.Body!);
 
@@ -167,11 +170,13 @@ public class Program
         anonymousParaStyle.Append(new PrimaryStyle());
         anonymousParaStyle.Append(new StyleParagraphProperties(
             new Indentation { Left = TextIndentTwips.ToString() },
-            new SpacingBetweenLines { Before = "120" },
+            new SpacingBetweenLines { Before = "60" },
             new NextParagraphStyle { Val = "REAnonymousPara" }
         ));
         anonymousParaStyle.Append(new StyleRunProperties(
-            new Italic()
+            new FontSize { Val = "16" }, // 8pt
+            new FontSizeComplexScript { Val = "16" } // 8pt,
+            //new Italic()
         ));
         styles.Append(anonymousParaStyle);
 
@@ -186,19 +191,20 @@ public class Program
                 StyleId = $"RE{english}"
             };
             noteStyle.Append(new StyleName { Val = $"RE Ergänzung - {german}" });
-            noteStyle.Append(new BasedOn { Val = "Normal" });
+            noteStyle.Append(new BasedOn { Val = "REAnonymousPara" });
             noteStyle.Append(new PrimaryStyle());
             noteStyle.Append(new StyleParagraphProperties(
                 new NumberingProperties(
                     new NumberingLevelReference { Val = 0 },
                     new NumberingId { Val = 10 + i } // 10 for first, 11 for second, etc.
                 ),
-                new SpacingBetweenLines { Before = "120" },
+                new SpacingBetweenLines { Before = "0" },
+                new OutlineLevel { Val = 9 }, // Not in outline
                 new NextParagraphStyle { Val = "REAnonymousPara" }
             ));
-            noteStyle.Append(new StyleRunProperties(
-                new Italic()
-            ));
+            //noteStyle.Append(new StyleRunProperties(
+            //    new Italic()
+            //));
             styles.Append(noteStyle);
         }
     }
@@ -225,8 +231,7 @@ public class Program
                 new NumberingId { Val = 1 }
             ),
             new OutlineLevel { Val = 0 }, // Always top level in outline
-            new SpacingBetweenLines { Before = "360", After = "120" }, // 6pt spacing before and after headings
-            new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
+            new SpacingBetweenLines { Before = "360", After = "120" }, // 12pt before, 4pt after headings   new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
             ),
@@ -335,13 +340,17 @@ public class Program
                 new LevelSuffix { Val = LevelSuffixValues.Nothing }, // No suffix, text is the "bullet"
                 new LevelJustification { Val = LevelJustificationValues.Left },
                 new PreviousParagraphProperties(
-                    new Indentation { Left = TextIndentTwips.ToString(), Hanging = "0" },
-                    new Tabs(
-                        new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
-                    )
+                    new SpacingBetweenLines { Before = "0", After = "0" },
+                    new OutlineLevel { Val = 9 }, // Not in outline
+                    new Indentation { Left = TextIndentTwips.ToString(), Hanging = "0" }
+                    // new Tabs(
+                    // new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
+                    //)
                 ),
                 new NumberingSymbolRunProperties(
-                    new Bold()
+                    //new Bold()
+                    new FontSize { Val = "16" }, // 8pt
+                    new FontSizeComplexScript { Val = "16" } // 8pt       )
                 )
             )
             {
@@ -383,6 +392,23 @@ public class Program
         }
 
         return numbering;
+    }
+
+    /// <summary>
+    /// Adds a DocumentSettingsPart containing compatibility settings (compatibilityMode).
+    /// </summary>
+    private static void AddDocumentSettings(MainDocumentPart mainPart)
+    {
+        if (mainPart == null) return;
+
+        var settingsPart = mainPart.AddNewPart<DocumentSettingsPart>();
+        // <w:compat><w:compatSetting w:name="compatibilityMode" w:val="15"/></w:compat>
+        settingsPart.Settings = new Settings(
+            new Compatibility(
+                new CompatibilitySetting { Name = CompatSettingNameValues.CompatibilityMode, Val = "15" }
+            )
+        );
+        settingsPart.Settings.Save();
     }
 
     /// <summary>
