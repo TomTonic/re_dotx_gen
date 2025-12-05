@@ -171,11 +171,14 @@ public class Program
         anonymousParaStyle.Append(new StyleParagraphProperties(
             new Indentation { Left = TextIndentTwips.ToString() },
             new SpacingBetweenLines { Before = "60" },
+            new Justification { Val = JustificationValues.Both },
             new NextParagraphStyle { Val = "REAnonymousPara" }
         ));
         anonymousParaStyle.Append(new StyleRunProperties(
             new FontSize { Val = "16" }, // 8pt
             new FontSizeComplexScript { Val = "16" } // 8pt,
+            ,
+            new Languages { Val = "de-DE" }
             //new Italic()
         ));
         styles.Append(anonymousParaStyle);
@@ -277,6 +280,7 @@ public class Program
             ),
             new OutlineLevel { Val = numberingLevel },
             new SpacingBetweenLines { Before = "180" }, // 6pt spacing before requirements
+            new Justification { Val = JustificationValues.Both },
             new Indentation { Left = TextIndentTwips.ToString(), Hanging = TextIndentTwips.ToString() },
             new Tabs(
                 new TabStop { Val = TabStopValues.Left, Position = TextIndentTwips, Leader = TabStopLeaderCharValues.Dot }
@@ -288,6 +292,8 @@ public class Program
             style.Append(new StyleRunProperties(
                 new FontSize { Val = FontSize },
                 new FontSizeComplexScript { Val = FontSize }
+                ,
+                new Languages { Val = "de-DE" }
             ));
         }
 
